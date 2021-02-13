@@ -292,9 +292,9 @@ void Rectangle::update(){
 				botCheck[0] = (i <= static_cast<int32_t>( painterCorners[border::MIN_Y](coordinate::X)*PPM + 0.5 ))? painterCorners[borders::MIN_X] : painterCorners[borders::MIN_Y];
 				botCheck[1] = (i <= static_cast<int32_t>( painterCorners[border::MIN_Y](coordinate::X)*PPM + 0.5 ))? painterCorners[borders::MIN_Y] : painterCorners[borders::MAX_X];
 				// top line checking
-				lineCheck(,,i,j);
+				lineCheck(,,i,j); // @TODO: UNDER DEVELOPMENT
 				// bottom line checking
-				lineCheck(,,i,j);
+				lineCheck(,,i,j); // @TODO: UNDER DEVELOPMENT
 			}
 		}
 	}
