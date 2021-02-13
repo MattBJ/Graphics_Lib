@@ -2,7 +2,7 @@
 
 constexpr uint16_t PPM = 16; // 16 pixels per meter
 constexpr float dt = (1.0/60); // 60 fps
-constexpr float MPS = 1.0; // 1 meter / second == x / dt.. just use dt
+constexpr float MPS = 1.0; // Meters per second
 
 constexpr double pi = 3.141592653589793;
 
