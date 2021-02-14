@@ -9,6 +9,9 @@
 #include <iostream>
 
 #include <limits> // std::numeric_limits for data types
+#include <optional> // c++17
+#include <tuple> // c++11
+#include <set>
 
 #include <Eigen/Dense> // eigen file path
 
@@ -176,5 +179,13 @@ public:
 	void move(bool angular = false); // default value
 	void bounce(uint16_t _width, uint16_t _height);
 };
+
+// comparing floats: ==, >=, and <=
+// don't need functions for < or >
+// bool floatCompareEE(float a, float b);
+// bool floatCompareGE(float a, float b);
+// bool floatCompareLE(float a, float b);
+int32_t roundHelper(float in);
+std::optional<std::tuple<std::set<Vector2f*>>> checkCopies(Vector2f ** in);
 
 #endif	//__BODIES_H__

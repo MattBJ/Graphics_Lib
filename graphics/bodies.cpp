@@ -25,7 +25,7 @@ Pixel Pixel::copy(){
 }
 
 Ball::Ball(float _radius, float _xCenter, float _yCenter) : 
-pos(_xCenter,_yCenter), vel((MPS*10)*dt,(MPS*5)*dt), acc((MPS/2)*dt,(MPS/2)*dt) // just for now
+pos(_xCenter,_yCenter), vel((5)*dt,(5)*dt), acc(0,0) // just for now
 {
 	radius = _radius;
 	theta = 0;
@@ -49,16 +49,16 @@ void Ball::update(){
 	// iterate over square (bottom left: position x/y - radius.. converted to PPM)
 	// adding 0.5 for rounding, it gets floored
 	uint16_t quantizedR = static_cast<uint16_t>(radius * PPM + 0.5);
-	std::cout << "Center pixel: (" 	<< static_cast<uint16_t>(pos(coordinate::X)*PPM+0.5) << ","
-									<< static_cast<uint16_t>(pos(coordinate::Y)*PPM + 0.5) << ")\n";
+	// std::cout << "Center pixel: (" 	<< static_cast<uint16_t>(pos(coordinate::X)*PPM+0.5) << ","
+									// << static_cast<uint16_t>(pos(coordinate::Y)*PPM + 0.5) << ")\n";
 	
-	std::cout <<
-	"\tmin_x:\t" << min_x << std::endl << 
-	"\tmax_x:\t" << max_x << std::endl << 
-	"\tmin_y:\t" << min_y << std::endl << 
-	"\tmax_y:\t" << max_y << std::endl <<
-	"\tvelX:\t" << vel(coordinate::X) << std::endl <<
-	"\tvelY:\t" << vel(coordinate::Y) << std::endl;
+	// std::cout <<
+	// "\tmin_x:\t" << min_x << std::endl << 
+	// "\tmax_x:\t" << max_x << std::endl << 
+	// "\tmin_y:\t" << min_y << std::endl << 
+	// "\tmax_y:\t" << max_y << std::endl <<
+	// "\tvelX:\t" << vel(coordinate::X) << std::endl <<
+	// "\tvelY:\t" << vel(coordinate::Y) << std::endl;
 
 	// @TODO: add clipping range on max side as well --> WINDOW_WIDTH/HEIGHT
 	for(i= (min_x>=0)? min_x : 0;i<max_x;i++){ // x axis pixels
@@ -190,7 +190,7 @@ void Ball::bounce(uint16_t _width, uint16_t _height){ // max width/height of win
 
 Rectangle::Rectangle(float _length, float _width, float _posX, float _posY) :
 	// vel((MPS*10)*dt,(MPS*5)*dt), acc((MPS/10)*dt,(MPS/10)*dt) // arbitrary stuff
-	vel((2.0)*dt,(2.0)*dt), acc(0,0)
+	vel((5.0)*dt,(5.0)*dt), acc(0,0)
 	// rPos is going to be recalculated
 	// rPos(0,0), rVel(0,0), rAcc(0,0)
 {
@@ -229,8 +229,9 @@ Rectangle::Rectangle(float _length, float _width, float _posX, float _posY) :
 		corners[i] += pos; // place the corner in reference to ground frame when done
 	}
 
-	thetaDot = 0;
-	theta2Dot = 0;
+	thetaDot = ((2*pi)/2)*dt;
+	theta2Dot = (pi/100)*dt;
+	// theta2Dot = ((2*pi)/200)*dt;
 
 	// thetaDot = (2*pi)*dt; // full rotation in 2 seconds
 	// theta2Dot = ((2*pi)/100)*dt;
@@ -247,55 +248,72 @@ void Rectangle::update(){
 	// figure out the borders
 	// pos represents one corner
 
-	std::cout << "\ncorners[0]:\n" << corners[0].transpose() << std::endl;
-	std::cout << "\ncorners[1]:\n" << corners[1].transpose() << std::endl;
-	std::cout << "\ncorners[2]:\n" << corners[2].transpose() << std::endl;
-	std::cout << "\ncorners[3]:\n" << corners[3].transpose() << std::endl;
+	// std::cout << "\ncorners[0]:\n" << corners[0].transpose() << std::endl;
+	// std::cout << "\ncorners[1]:\n" << corners[1].transpose() << std::endl;
+	// std::cout << "\ncorners[2]:\n" << corners[2].transpose() << std::endl;
+	// std::cout << "\ncorners[3]:\n" << corners[3].transpose() << std::endl;
 
 	max_x = max_y = std::numeric_limits<int32_t>::min();
 	min_x = min_y = std::numeric_limits<int32_t>::max();
 
 	for(uint8_t i = 0; i < 4; i++){
-		min_x =	(static_cast<int32_t>(corners[i](coordinate::X)*PPM + 0.5) < min_x)? static_cast<int32_t>(corners[i](coordinate::X)*PPM + 0.5) : min_x;
-		max_x = (static_cast<int32_t>(corners[i](coordinate::X)*PPM + 0.5) > max_x)? static_cast<int32_t>(corners[i](coordinate::X)*PPM + 0.5) : max_x;
-		min_y = (static_cast<int32_t>(corners[i](coordinate::Y)*PPM + 0.5) < min_y)? static_cast<int32_t>(corners[i](coordinate::Y)*PPM + 0.5) : min_y;
-		max_y = (static_cast<int32_t>(corners[i](coordinate::Y)*PPM + 0.5) > max_y)? static_cast<int32_t>(corners[i](coordinate::Y)*PPM + 0.5) : max_y;
+		min_x =	( roundHelper(corners[i](coordinate::X)*PPM) < min_x )?  roundHelper(corners[i](coordinate::X)*PPM) : min_x ;
+		max_x = ( roundHelper(corners[i](coordinate::X)*PPM) > max_x )?  roundHelper(corners[i](coordinate::X)*PPM) : max_x ;
+		min_y = ( roundHelper(corners[i](coordinate::Y)*PPM) < min_y )?  roundHelper(corners[i](coordinate::Y)*PPM) : min_y ;
+		max_y = ( roundHelper(corners[i](coordinate::Y)*PPM) > max_y )?  roundHelper(corners[i](coordinate::Y)*PPM) : max_y ;
 	}
-	std::cout << "min_x:\t" << min_x << std::endl;
-	std::cout << "max_x:\t" << max_x << std::endl;
-	std::cout << "min_y:\t" << min_y << std::endl;
-	std::cout << "max_y:\t" << max_y << std::endl;
+	// std::cout << "min_x:\t" << min_x << std::endl;
+	// std::cout << "max_x:\t" << max_x << std::endl;
+	// std::cout << "min_y:\t" << min_y << std::endl;
+	// std::cout << "max_y:\t" << max_y << std::endl;
 
 	// special case or not --> need to find X and Y coordinate copy on another corner
 	bool specialCase = false;
 	uint8_t inc = 0;
+
+	// THIS IS THE SOURCE OF SOOOO MANY BUGS
 	for(uint8_t i = 1; i < 4; i++){
 		// check corner[0] quantized with the rest
 		// DUE TO FLOATING POINT ERRORS, WILL ALWAYS NEED TO COMPARE BY USING:
 			// +- some epsilon (infintesimally small fraction)
 			// converting data points to a quantized, agreed upon scale
 		// scale by PPM and + 0.5 for flooring. If they end up on the SAME PIXEL, then we increment
-		inc += (( static_cast<int32_t>(corners[0](coordinate::X)*PPM + 0.5) == static_cast<int32_t>(corners[i](coordinate::X)*PPM + 0.5) ) || 
-				( static_cast<int32_t>(corners[0](coordinate::Y)*PPM + 0.5) == static_cast<int32_t>(corners[i](coordinate::Y)*PPM + 0.5) ))? 1 : 0;
+		inc += (( roundHelper(corners[0](coordinate::X)*PPM) == roundHelper(corners[i](coordinate::X)*PPM) ) || 
+				( roundHelper(corners[0](coordinate::Y)*PPM) == roundHelper(corners[i](coordinate::Y)*PPM) ))? 1 : 0;
 		specialCase = (inc == 2)? true : false; 
 		if(specialCase){
 			break; // stop checking
 		}
 	}
+	// std::set<> Set;
 	// special case --> paint every loop!
-	Vector2f painterCorners[4];
+	Vector2f * painterCorners[4]; // references an address --> know if there are copies
+	int32_t borderVals[4] = {min_x, max_x, min_y, max_y};
 	if(!specialCase){ // need to put our rectangle corners in standard order for painting
-		int32_t borderVals[4] = {min_x, max_x, min_y, max_y};
 		for(uint8_t i = 0; i < 4; i++){ // corresponds to borderVals AND painterCorners (trying to map borderVals to corner standard form)
 			// iterator over the 4 border values --> check if the corresponding corner's coordinate matches
 			// j < border::MIN_Y == checking x's
 			// j > border::MAX_X == checking y's
 			for(uint8_t j=0; j < 4; j++){ // iterate over all rectangle members: corner[0-3]
-				painterCorners[i] =	((i < border::MIN_Y) && ( static_cast<int32_t>((corners[j](coordinate::X)*PPM)+0.5) == borderVals[i]) )? corners[j] :
-									((i > border::MAX_X) && ( static_cast<int32_t>((corners[j](coordinate::Y)*PPM)+0.5) == borderVals[i]) )? corners[j] : painterCorners[i];
+				painterCorners[i] =	( (i < border::MIN_Y) && ( roundHelper(corners[j](coordinate::X)*PPM) == borderVals[i] ) )? &corners[j] :
+									( (i > border::MAX_X) && ( roundHelper(corners[j](coordinate::Y)*PPM) == borderVals[i] ) )? &corners[j] : painterCorners[i];
 			}
 		}
 	}
+	// returns an optional --> tuple: address copy, both indexes found at
+	auto check = checkCopies(painterCorners);
+	if(check.has_value()){ // there are 2 copies of something
+		// uint8_t indices[2] = {std::get<1>(check.value()),std::get<2>(check.value())}; // these are the only 2 to check for border vals
+		// can do set.count(KEY_VALUE) to determine if it exists in my set
+		uint8_t missingIdx = 0;
+		for(uint8_t i = 0; i < 4; i++){
+			missingIdx =	(std::get<0>(check.value()).count(&corners[i]))? missingIdx : i; // returns 0 if it doesn't exist in the set
+		}
+		for(uint8_t i = 0; i < 4; i++){ // if there's another bug, it might be because corner[0] overwrote multiple..
+			painterCorners[i] =	( (i < border::MIN_Y) && ( roundHelper(corners[missingIdx](coordinate::X)*PPM) == borderVals[i] ) )? &corners[missingIdx] :
+								( (i > border::MAX_X) && ( roundHelper(corners[missingIdx](coordinate::Y)*PPM) == borderVals[i] ) )? &corners[missingIdx] : painterCorners[i];
+		}
+	} // checkCopies again?
 
 	// @TODO: Range clipping on the upper bounds
 	for(uint16_t i = (min_x >=0)? min_x: 0; i<max_x; i++){
@@ -305,11 +323,18 @@ void Rectangle::update(){
 			} else { // need to do piecewise line checking..
 				Vector2f topCheck[2];
 				Vector2f botCheck[2];
-				topCheck[0] = (i <= static_cast<int32_t>( painterCorners[border::MAX_Y](coordinate::X)*PPM + 0.5 ))? painterCorners[border::MIN_X] : painterCorners[border::MAX_Y];
-				topCheck[1] = (i <= static_cast<int32_t>( painterCorners[border::MAX_Y](coordinate::X)*PPM + 0.5 ))? painterCorners[border::MAX_Y] : painterCorners[border::MAX_X];
+				// reads: 	line 1 = ternary
+				//			line 2 = return values
 
-				botCheck[0] = (i <= static_cast<int32_t>( painterCorners[border::MIN_Y](coordinate::X)*PPM + 0.5 ))? painterCorners[border::MIN_X] : painterCorners[border::MIN_Y];
-				botCheck[1] = (i <= static_cast<int32_t>( painterCorners[border::MIN_Y](coordinate::X)*PPM + 0.5 ))? painterCorners[border::MIN_Y] : painterCorners[border::MAX_X];
+				topCheck[0] = (i <= roundHelper(static_cast<Vector2f>(*painterCorners[border::MAX_Y])(coordinate::X)*PPM) )? 
+						static_cast<Vector2f>(*painterCorners[border::MIN_X]) : static_cast<Vector2f>(*painterCorners[border::MAX_Y]);
+				topCheck[1] = (i <= roundHelper(static_cast<Vector2f>(*painterCorners[border::MAX_Y])(coordinate::X)*PPM) )? 
+						static_cast<Vector2f>(*painterCorners[border::MAX_Y]) : static_cast<Vector2f>(*painterCorners[border::MAX_X]);
+
+				botCheck[0] = (i <= roundHelper(static_cast<Vector2f>(*painterCorners[border::MIN_Y])(coordinate::X)*PPM) )? 
+						static_cast<Vector2f>(*painterCorners[border::MIN_X]) : static_cast<Vector2f>(*painterCorners[border::MIN_Y]);
+				botCheck[1] = (i <= roundHelper(static_cast<Vector2f>(*painterCorners[border::MIN_Y])(coordinate::X)*PPM) )? 
+						static_cast<Vector2f>(*painterCorners[border::MIN_Y]) : static_cast<Vector2f>(*painterCorners[border::MAX_X]);
 				// top line checking
 				Vector2f pointCheck(static_cast<float>(i)/PPM,static_cast<float>(j)/PPM);
 				
@@ -395,3 +420,70 @@ void Rectangle::move(bool angular){
 void Rectangle::bounce(uint16_t _width, uint16_t _height){
 	return;
 }
+
+int32_t roundHelper(float in){
+	int32_t retVal;
+	if(in < 0){
+		retVal = static_cast<int32_t>(in - 0.5);
+	} else {
+		retVal = static_cast<int32_t>(in + 0.5);
+	}
+	return retVal;
+}
+
+// std::get<0 or 1> for the pointer
+// c++17 structured binding:
+	// auto [ address0, address1 ] = checkCopies(painterCorners);
+// returns the set of addresses and the 2 targeted indices
+std::optional<std::tuple<std::set<Vector2f*>>> checkCopies(Vector2f ** in){
+	uint8_t offset = 0;
+	while(offset < 3){
+			for(uint8_t i = offset + 1; i < 4; i++){
+				if(in[offset] == in[i]){ //
+					std::set<Vector2f*> retSet;
+					for(uint8_t j = 0; j < 4; j++){
+						retSet.insert(in[j]);
+					}
+					return { std::make_tuple(retSet) }; // tuple might be useless for me lol
+				}
+			}
+		offset++;
+	}
+	return std::nullopt;
+}
+
+// i learned a no no today :)
+
+/*
+
+// <limits> provides a standard epsilon
+	// std::numeric_limits<float OR DOUBLE>::epsilon
+// so.. some sort of inaccuracies led it to be that epsilon was too small
+bool floatCompareEE(float a, float b){
+	bool retVal;
+
+	retVal =	(	(a <= b + std::numeric_limits<float>::epsilon()*1000) && 
+					(a >= b - std::numeric_limits<float>::epsilon()*1000))? true : false;
+
+	return retVal;
+}
+
+bool floatCompareGE(float a, float b){
+	bool retVal;
+
+	retVal =	(a >= b - std::numeric_limits<float>::epsilon()*1000)? true : false;
+
+	return retVal;
+}
+
+bool floatCompareLE(float a, float b){
+	bool retVal;
+
+	retVal =	(a <= b + std::numeric_limits<float>::epsilon()*1000)? true : false;
+
+	return retVal;
+}
+
+// static casting always floors (rounds to 0, from both sides)
+// need to add/subtract 0.5 to round properly
+*/
