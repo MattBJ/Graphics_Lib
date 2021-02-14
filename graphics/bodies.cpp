@@ -87,14 +87,14 @@ void Ball::move(bool angular){ // default = false
 	// for now let's always use angular
 	if(angular){
 		Matrix3f velAf;
-		// cos,sin
-		// -sin,cos --> counterclockwise orientation
-		velAf <<	cos(thetaDot),		sin(thetaDot),	vel(coordinate::X),
-					-sin(thetaDot),		cos(thetaDot),	vel(coordinate::Y),
+		// cos,-sin
+		// sin,cos --> counterclockwise orientation
+		velAf <<	cos(thetaDot),		-sin(thetaDot),	vel(coordinate::X),
+					sin(thetaDot),		cos(thetaDot),	vel(coordinate::Y),
 					0,					0,				1;
 		Matrix3f accAf;
-		accAf <<	cos(theta2Dot),		sin(theta2Dot),	acc(coordinate::X),
-					-sin(theta2Dot),	cos(theta2Dot),	acc(coordinate::Y),
+		accAf <<	cos(theta2Dot),		-sin(theta2Dot),acc(coordinate::X),
+					sin(theta2Dot),		cos(theta2Dot),	acc(coordinate::Y),
 					0,					0,				1;
 		Vector3f tmpPos;
 		tmpPos << pos, 1; // concatenates a 1 on the end of position vector and gets assigned to tmpPos
@@ -189,7 +189,8 @@ void Ball::bounce(uint16_t _width, uint16_t _height){ // max width/height of win
 }
 
 Rectangle::Rectangle(float _length, float _width, float _posX, float _posY) :
-	vel((MPS*10)*dt,(MPS*5)*dt), acc((MPS/10)*dt,(MPS/10)*dt) // arbitrary stuff
+	// vel((MPS*10)*dt,(MPS*5)*dt), acc((MPS/10)*dt,(MPS/10)*dt) // arbitrary stuff
+	vel((2.0)*dt,(2.0)*dt), acc(0,0)
 	// rPos is going to be recalculated
 	// rPos(0,0), rVel(0,0), rAcc(0,0)
 {
@@ -197,16 +198,18 @@ Rectangle::Rectangle(float _length, float _width, float _posX, float _posY) :
 		// 'standard graphics uses the corner'...
 	// position will be the body's reference frame from origin
 
-	theta = 0;
+	theta = 3*pi/2;
 	length = _length;
 	width = _width;
-	// first generate all corners by referencing the generator corner
+	// first generate all corners by referencing the generator corner and position args
+	Vector2f tmpLen, tmpWid;
+	tmpLen << 0,length;
+	tmpWid << width,0;
 	corners[0] << _posX, _posY; // generator
-	corners[1] << sin(theta)*length,cos(theta)*length;
-	corners[1] += corners[0];
-	corners[2] << cos(theta)*width,sin(theta)*width;
-	corners[2] += corners[0];
-	corners[3] = (corners[1]-corners[0]) + (corners[2]-corners[0]) + corners[0];
+	corners[1] = tmpLen + corners[0];
+	corners[2] = tmpWid + corners[0];
+	corners[3] = tmpLen + tmpWid + corners[0];
+	// calculate reference frame for the body
 
 	// second create the actual reference frame --> here on out all corners will use this
 	// reference frame lies on the base of the rectangle: between corners 0 and 2, halfway
@@ -215,9 +218,22 @@ Rectangle::Rectangle(float _length, float _width, float _posX, float _posY) :
 	pos = ((width/2)*pos)/pos.norm();
 	pos += corners[0]; // now this reference frame references the ground frame
 
+	// rotate
+	Matrix2f ccRot;
+	ccRot <<	cos(theta),		-sin(theta), // the angular orientation
+				sin(theta),		cos(theta);
+
+	for(uint8_t i = 0; i<4; i++){
+		corners[i] -= pos; // make the corner in reference to reference point
+		corners[i] = ccRot * corners[i]; // rotate CC by pi
+		corners[i] += pos; // place the corner in reference to ground frame when done
+	}
 
 	thetaDot = 0;
 	theta2Dot = 0;
+
+	// thetaDot = (2*pi)*dt; // full rotation in 2 seconds
+	// theta2Dot = ((2*pi)/100)*dt;
 
 	update();
 	return;
@@ -255,7 +271,12 @@ void Rectangle::update(){
 	uint8_t inc = 0;
 	for(uint8_t i = 1; i < 4; i++){
 		// check corner[0] quantized with the rest
-		inc += ((corners[0](coordinate::X) == corners[i](coordinate::X)) || (corners[0](coordinate::Y) == corners[i](coordinate::Y)))? 1 : 0;
+		// DUE TO FLOATING POINT ERRORS, WILL ALWAYS NEED TO COMPARE BY USING:
+			// +- some epsilon (infintesimally small fraction)
+			// converting data points to a quantized, agreed upon scale
+		// scale by PPM and + 0.5 for flooring. If they end up on the SAME PIXEL, then we increment
+		inc += (( static_cast<int32_t>(corners[0](coordinate::X)*PPM + 0.5) == static_cast<int32_t>(corners[i](coordinate::X)*PPM + 0.5) ) || 
+				( static_cast<int32_t>(corners[0](coordinate::Y)*PPM + 0.5) == static_cast<int32_t>(corners[i](coordinate::Y)*PPM + 0.5) ))? 1 : 0;
 		specialCase = (inc == 2)? true : false; 
 		if(specialCase){
 			break; // stop checking
@@ -265,16 +286,13 @@ void Rectangle::update(){
 	Vector2f painterCorners[4];
 	if(!specialCase){ // need to put our rectangle corners in standard order for painting
 		int32_t borderVals[4] = {min_x, max_x, min_y, max_y};
-		for(uint8_t i = 0; i < 4; i++){ // i = iterator for output paintCorner
-			// iterate over the painterCornerss --> rectangle corners in standard order
-			for(uint8_t j = 0; j < 4; j++){ // iterate over the borderValues in standard order
-				// iterator over the 4 border values --> check if the corresponding corner's coordinate matches
-				// j < border::MIN_Y == checking x's
-				// j > border::MAX_X == checking y's
-				for(uint8_t k=0; k < 4; k++){ // iterate over all rectangle members: corner[0-3]
-					painterCorners[i] =	((j < border::MIN_Y) && ( static_cast<int32_t>((corners[k](coordinate::X)*PPM)+0.5) == borderVals[j]))? corners[k] :
-										((j > border::MAX_X) && ( static_cast<int32_t>((corners[k](coordinate::Y)*PPM)+0.5) == borderVals[j]))? corners[k] : painterCorners[i];
-				}
+		for(uint8_t i = 0; i < 4; i++){ // corresponds to borderVals AND painterCorners (trying to map borderVals to corner standard form)
+			// iterator over the 4 border values --> check if the corresponding corner's coordinate matches
+			// j < border::MIN_Y == checking x's
+			// j > border::MAX_X == checking y's
+			for(uint8_t j=0; j < 4; j++){ // iterate over all rectangle members: corner[0-3]
+				painterCorners[i] =	((i < border::MIN_Y) && ( static_cast<int32_t>((corners[j](coordinate::X)*PPM)+0.5) == borderVals[i]) )? corners[j] :
+									((i > border::MAX_X) && ( static_cast<int32_t>((corners[j](coordinate::Y)*PPM)+0.5) == borderVals[i]) )? corners[j] : painterCorners[i];
 			}
 		}
 	}
@@ -293,12 +311,12 @@ void Rectangle::update(){
 				botCheck[0] = (i <= static_cast<int32_t>( painterCorners[border::MIN_Y](coordinate::X)*PPM + 0.5 ))? painterCorners[border::MIN_X] : painterCorners[border::MIN_Y];
 				botCheck[1] = (i <= static_cast<int32_t>( painterCorners[border::MIN_Y](coordinate::X)*PPM + 0.5 ))? painterCorners[border::MIN_Y] : painterCorners[border::MAX_X];
 				// top line checking
-				Vector2f pointCheck(i,j);
+				Vector2f pointCheck(static_cast<float>(i)/PPM,static_cast<float>(j)/PPM);
 				
 				// bottom line checking
 				
-				if( ( lineCheck(topCheck[0],topCheck[1],pointCheck) ) && 
-					( lineCheck(botCheck[0],botCheck[1],pointCheck) )){
+				if( ( lineCheck(topCheck[0],topCheck[1],pointCheck,true) ) && 
+					( lineCheck(botCheck[0],botCheck[1],pointCheck,false) )){
 					painter.newPixel(i,j);
 				}
 			}
@@ -307,7 +325,8 @@ void Rectangle::update(){
 	return;
 }
 
-bool Rectangle::lineCheck(Vector2f p1, Vector2f p2, Vector2f pIn){
+// checks piont for being inside rectangle bounds
+bool Rectangle::lineCheck(Vector2f p1, Vector2f p2, Vector2f pIn, bool under){
 	// reference point = p1
 	// decider = p2 - p1
 	// check = p3 - p1
@@ -320,8 +339,12 @@ bool Rectangle::lineCheck(Vector2f p1, Vector2f p2, Vector2f pIn){
 	check 	= (check*50)/check.norm();
 
 	bool retVal;
-	retVal = ((check(coordinate::Y)) <= (decider(coordinate::Y)))? true : false;
-
+	// should I quantize these coordinates?
+	if(under){ // check below decider
+		retVal = ((check(coordinate::Y)) <= (decider(coordinate::Y)))? true : false;
+	} else { // check above decider
+		retVal = ((check(coordinate::Y)) >= (decider(coordinate::Y)))? true : false;
+	}
 	return retVal;
 }
 
@@ -335,15 +358,14 @@ void Rectangle::move(bool angular){
 		// Matrix3f accAf;
 		// is the acceleration Affine even necessary?
 		// I update velocity vector from acceleration, then update angular as scalar..
-		velAf <<	cos(thetaDot),	sin(thetaDot),	vel(coordinate::X),
-					-sin(thetaDot),	cos(thetaDot),	vel(coordinate::Y),
+		velAf <<	cos(thetaDot),	-sin(thetaDot),	vel(coordinate::X),
+					sin(thetaDot),	cos(thetaDot),	vel(coordinate::Y),
 					0,0,1;
 
 		// accAf <<	cos(theta2Dot),		sin(theta2Dot),acc(coordinate::X),
 		// 			-sin(theta2Dot),	cos(theta2Dot),acc(coordinate::Y),
 		// 			0,0,1;
 
-		Vector3f tmpPos, tmpVel;
 		for(uint8_t i = 0; i < 4; i++){
 			// all 4 corners rotate RELATIVE to reference frame
 

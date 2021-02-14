@@ -25,8 +25,9 @@ extern const float dt;
 
 
 // sadly, can't use enum class because it creates its own type.. and eigen expects integer arguments
+// 0,1,2
 enum coordinate {X,Y,Z}; // enum class rip
-
+// 0,1,2,3
 enum border {MIN_X,MAX_X,MIN_Y,MAX_Y}; // used for painter object in rectangle
 
 // quantization of real world vectors
@@ -169,7 +170,7 @@ public:
 	Rectangle(float _length, float _width, float _posX, float _posY);
 	// generates pixels (and X/Y ranges)
 	void update();
-	bool lineCheck(Vector2f p1, Vector2f p2, Vector2f pIn);
+	bool lineCheck(Vector2f p1, Vector2f p2, Vector2f pIn, bool under);
 	// move updates reference frame position, velocity, and acceleration
 	// generates all 4 corners
 	void move(bool angular = false); // default value
