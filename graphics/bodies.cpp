@@ -1,8 +1,8 @@
 #include "bodies.hpp"
 
-constexpr uint16_t PPM = 16; // 16 pixels per meter
+constexpr uint16_t PPM = 4; // 16 pixels per meter
 constexpr float dt = (1.0/60); // 60 fps
-constexpr float MPS = 1.0; // Meters per second
+constexpr float MPS = 1.0; // 1 meter / second == x / dt.. just use dt
 
 constexpr double pi = 3.141592653589793;
 
@@ -189,46 +189,47 @@ void Ball::bounce(uint16_t _width, uint16_t _height){ // max width/height of win
 }
 
 Rectangle::Rectangle(float _length, float _width, float _posX, float _posY) :
-	pos(_posX,_posY), vel((MPS*10)*dt,(MPS*5)*dt), acc((MPS/10)*dt,(MPS/10)*dt) // arbitrary stuff
+	vel((MPS*10)*dt,(MPS*5)*dt), acc((MPS/10)*dt,(MPS/10)*dt) // arbitrary stuff
 	// rPos is going to be recalculated
 	// rPos(0,0), rVel(0,0), rAcc(0,0)
 {
+	// want to track the referenceFrame
+		// 'standard graphics uses the corner'...
+	// position will be the body's reference frame from origin
+
 	theta = 0;
-	thetaDot = 0;
-	theta2Dot = 0;
 	length = _length;
 	width = _width;
+	// first generate all corners by referencing the generator corner
+	corners[0] << _posX, _posY; // generator
+	corners[1] << sin(theta)*length,cos(theta)*length;
+	corners[1] += corners[0];
+	corners[2] << cos(theta)*width,sin(theta)*width;
+	corners[2] += corners[0];
+	corners[3] = (corners[1]-corners[0]) + (corners[2]-corners[0]) + corners[0];
+
+	// second create the actual reference frame --> here on out all corners will use this
+	// reference frame lies on the base of the rectangle: between corners 0 and 2, halfway
+
+	pos = corners[2] - corners[0]; // referencing the generator
+	pos = ((width/2)*pos)/pos.norm();
+	pos += corners[0]; // now this reference frame references the ground frame
+
+
+	thetaDot = 0;
+	theta2Dot = 0;
 
 	update();
 	return;
 }
 
-// update painter
+// creates painter pixels
+// borders (X and Y ranges)
 void Rectangle::update(){
 	painter.clear();
 
 	// figure out the borders
 	// pos represents one corner
-	
-	// initialize the corner position
-	// corners built from pos vector reference frame
-	for(uint8_t i = 0; i < 4; i++){
-		corners[i] << pos;
-		if(i==0){ // just a copy
-			continue;
-		}
-		// first and last corners shifted up by length
-		// Do projection with the 2 vector magnitudes
-		if(not((i-1) % 2)){ // same as !
-			// projection in the Y hat direction
-			corners[i](coordinate::Y) += cos(theta)*length;
-		}
-		// last 2 corners shifted by width
-		if((i-1)){
-			// projection in X hat direction
-			corners[i](coordinate::X) += cos(theta)*width;
-		}
-	}
 
 	std::cout << "\ncorners[0]:\n" << corners[0].transpose() << std::endl;
 	std::cout << "\ncorners[1]:\n" << corners[1].transpose() << std::endl;
@@ -249,12 +250,12 @@ void Rectangle::update(){
 	std::cout << "min_y:\t" << min_y << std::endl;
 	std::cout << "max_y:\t" << max_y << std::endl;
 
-	// special case or not
+	// special case or not --> need to find X and Y coordinate copy on another corner
 	bool specialCase = false;
+	uint8_t inc = 0;
 	for(uint8_t i = 1; i < 4; i++){
 		// check corner[0] quantized with the rest
-		uint8_t inc = 0;
-		inc += (corners[0] == corners[i])? 1 : 0;
+		inc += ((corners[0](coordinate::X) == corners[i](coordinate::X)) || (corners[0](coordinate::Y) == corners[i](coordinate::Y)))? 1 : 0;
 		specialCase = (inc == 2)? true : false; 
 		if(specialCase){
 			break; // stop checking
@@ -268,11 +269,11 @@ void Rectangle::update(){
 			// iterate over the painterCornerss --> rectangle corners in standard order
 			for(uint8_t j = 0; j < 4; j++){ // iterate over the borderValues in standard order
 				// iterator over the 4 border values --> check if the corresponding corner's coordinate matches
-				// j < borders::MIN_Y == checking x's
-				// j > borders::MAX_X == checking y's
+				// j < border::MIN_Y == checking x's
+				// j > border::MAX_X == checking y's
 				for(uint8_t k=0; k < 4; k++){ // iterate over all rectangle members: corner[0-3]
-					painterCorners[i] =	((j < borders::MIN_Y) && ( static_cast<int32_t>((corners[k](coordinate::X)*PPM)+0.5) == borderVals[j]))? corners[k] :
-										((j > borders::MAX_X) && ( static_cast<int32_t>((corners[k](coordinate::Y)*PPM)+0.5) == borderVals[j]))? corners[k] : painterCorners[i];
+					painterCorners[i] =	((j < border::MIN_Y) && ( static_cast<int32_t>((corners[k](coordinate::X)*PPM)+0.5) == borderVals[j]))? corners[k] :
+										((j > border::MAX_X) && ( static_cast<int32_t>((corners[k](coordinate::Y)*PPM)+0.5) == borderVals[j]))? corners[k] : painterCorners[i];
 				}
 			}
 		}
@@ -286,18 +287,89 @@ void Rectangle::update(){
 			} else { // need to do piecewise line checking..
 				Vector2f topCheck[2];
 				Vector2f botCheck[2];
-				topCheck[0] = (i <= static_cast<int32_t>( painterCorners[border::MAX_Y](coordinate::X)*PPM + 0.5 ))? painterCorners[borders::MIN_X] : painterCorners[borders::MAX_Y];
-				topCheck[1] = (i <= static_cast<int32_t>( painterCorners[border::MAX_Y](coordinate::X)*PPM + 0.5 ))? painterCorners[borders::MAX_Y] : painterCorners[borders::MAX_X];
+				topCheck[0] = (i <= static_cast<int32_t>( painterCorners[border::MAX_Y](coordinate::X)*PPM + 0.5 ))? painterCorners[border::MIN_X] : painterCorners[border::MAX_Y];
+				topCheck[1] = (i <= static_cast<int32_t>( painterCorners[border::MAX_Y](coordinate::X)*PPM + 0.5 ))? painterCorners[border::MAX_Y] : painterCorners[border::MAX_X];
 
-				botCheck[0] = (i <= static_cast<int32_t>( painterCorners[border::MIN_Y](coordinate::X)*PPM + 0.5 ))? painterCorners[borders::MIN_X] : painterCorners[borders::MIN_Y];
-				botCheck[1] = (i <= static_cast<int32_t>( painterCorners[border::MIN_Y](coordinate::X)*PPM + 0.5 ))? painterCorners[borders::MIN_Y] : painterCorners[borders::MAX_X];
+				botCheck[0] = (i <= static_cast<int32_t>( painterCorners[border::MIN_Y](coordinate::X)*PPM + 0.5 ))? painterCorners[border::MIN_X] : painterCorners[border::MIN_Y];
+				botCheck[1] = (i <= static_cast<int32_t>( painterCorners[border::MIN_Y](coordinate::X)*PPM + 0.5 ))? painterCorners[border::MIN_Y] : painterCorners[border::MAX_X];
 				// top line checking
-				lineCheck(,,i,j); // @TODO: UNDER DEVELOPMENT
+				Vector2f pointCheck(i,j);
+				
 				// bottom line checking
-				lineCheck(,,i,j); // @TODO: UNDER DEVELOPMENT
+				
+				if( ( lineCheck(topCheck[0],topCheck[1],pointCheck) ) && 
+					( lineCheck(botCheck[0],botCheck[1],pointCheck) )){
+					painter.newPixel(i,j);
+				}
 			}
 		}
 	}
+	return;
+}
 
+bool Rectangle::lineCheck(Vector2f p1, Vector2f p2, Vector2f pIn){
+	// reference point = p1
+	// decider = p2 - p1
+	// check = p3 - p1
+	// normalize them both
+	// project them in y direction --> setting p1 as reference makes the Y component good enough
+		// ---------------------???
+	Vector2f decider = p2 - p1;
+	Vector2f check = pIn - p1;
+	decider = (decider*50)/decider.norm(); // normalize and set magnitude to 50
+	check 	= (check*50)/check.norm();
+
+	bool retVal;
+	retVal = ((check(coordinate::Y)) <= (decider(coordinate::Y)))? true : false;
+
+	return retVal;
+}
+
+// updates velocities (accelerations too? not now)
+// updates the 4 corners to generate pixels from
+
+void Rectangle::move(bool angular){
+	// need to shift
+	if(angular){
+		Matrix3f velAf;
+		// Matrix3f accAf;
+		// is the acceleration Affine even necessary?
+		// I update velocity vector from acceleration, then update angular as scalar..
+		velAf <<	cos(thetaDot),	sin(thetaDot),	vel(coordinate::X),
+					-sin(thetaDot),	cos(thetaDot),	vel(coordinate::Y),
+					0,0,1;
+
+		// accAf <<	cos(theta2Dot),		sin(theta2Dot),acc(coordinate::X),
+		// 			-sin(theta2Dot),	cos(theta2Dot),acc(coordinate::Y),
+		// 			0,0,1;
+
+		Vector3f tmpPos, tmpVel;
+		for(uint8_t i = 0; i < 4; i++){
+			// all 4 corners rotate RELATIVE to reference frame
+
+			// scratch buffers for switching between 2D and 3D vectors
+			Vector2f scratch2; // for doing 2D math
+			Vector3f scratch3; // for doing 3D math
+			scratch2 = corners[i] - pos; // referenced from the body reference frame
+			Vector3f cornerTransform;
+			cornerTransform << scratch2,1;
+			cornerTransform = velAf * cornerTransform; // angular + linear velocity
+			scratch3 << pos,0;
+			cornerTransform += scratch3; // shift back to ground frame!
+			corners[i](coordinate::X) = cornerTransform(coordinate::X);
+			corners[i](coordinate::Y) = cornerTransform(coordinate::Y);
+		}
+
+		// these vectors all for reference frame
+		pos += vel;
+		vel += acc;
+		// not updating acceleration for now
+		theta += thetaDot;
+		thetaDot += theta2Dot;
+	}
+	return;
+}
+
+void Rectangle::bounce(uint16_t _width, uint16_t _height){
 	return;
 }
