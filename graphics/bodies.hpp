@@ -57,7 +57,7 @@ public:
 	int32_t min_x, min_y, max_x, max_y;
 	// all in meters, 16 pixels per meter
 	Ball(float _radius, float _xCenter, float _yCenter);
-	void move(bool angular = false);
+	void move();
 	// add this next
 	// void move(Vector2f jerk);
 	void bounce(uint16_t _width, uint16_t _height);
@@ -66,6 +66,7 @@ public:
 	void capVector(uint16_t _width, uint16_t _height);
 };
 
+// https://www.uio.no/studier/emner/matnat/ifi/nedlagte-emner/INF3320/h03/undervisningsmateriale/lecture3.pdf
 
 // going to use Eigen library for my linear algebra from here on!
 
@@ -97,16 +98,11 @@ public:
 	bool lineCheck(Vector2f p1, Vector2f p2, Vector2f pIn, bool under);
 	// move updates reference frame position, velocity, and acceleration
 	// generates all 4 corners
-	void move(bool angular = false); // default value
+	void move(); // default value
 	void bounce(uint16_t _width, uint16_t _height);
 };
 
-// comparing floats: ==, >=, and <=
-// don't need functions for < or >
-// bool floatCompareEE(float a, float b);
-// bool floatCompareGE(float a, float b);
-// bool floatCompareLE(float a, float b);
 int32_t roundHelper(float in);
-std::optional<std::tuple<std::set<Vector2f*>>> checkCopies(Vector2f ** in);
+std::optional<std::set<Vector2f*>> checkCopies(Vector2f ** in);
 
 #endif	//__BODIES_H__

@@ -83,43 +83,36 @@ void Ball::update(){
 
  // constant acceleration
 
-void Ball::move(bool angular){ // default = false
-	// for now let's always use angular
-	if(angular){
-		Matrix3f velAf;
-		// cos,-sin
-		// sin,cos --> counterclockwise orientation
-		velAf <<	cos(thetaDot),		-sin(thetaDot),	vel(coordinate::X),
-					sin(thetaDot),		cos(thetaDot),	vel(coordinate::Y),
-					0,					0,				1;
-		Matrix3f accAf;
-		accAf <<	cos(theta2Dot),		-sin(theta2Dot),acc(coordinate::X),
-					sin(theta2Dot),		cos(theta2Dot),	acc(coordinate::Y),
-					0,					0,				1;
-		Vector3f tmpPos;
-		tmpPos << pos, 1; // concatenates a 1 on the end of position vector and gets assigned to tmpPos
-		Vector3f tmpVel;
-		tmpVel << vel, 1;
-		// Vector3f tmpAcc(acc(coordinate::X),acc(coordinate::Y),1);
+void Ball::move(){
+	Matrix3f velAf;
+	// cos,-sin
+	// sin,cos --> counterclockwise orientation
+	velAf <<	cos(thetaDot),		-sin(thetaDot),	vel(coordinate::X),
+				sin(thetaDot),		cos(thetaDot),	vel(coordinate::Y),
+				0,					0,				1;
+	Matrix3f accAf;
+	accAf <<	cos(theta2Dot),		-sin(theta2Dot),acc(coordinate::X),
+				sin(theta2Dot),		cos(theta2Dot),	acc(coordinate::Y),
+				0,					0,				1;
+	Vector3f tmpPos;
+	tmpPos << pos, 1; // concatenates a 1 on the end of position vector and gets assigned to tmpPos
+	Vector3f tmpVel;
+	tmpVel << vel, 1;
+	// Vector3f tmpAcc(acc(coordinate::X),acc(coordinate::Y),1);
 
-		tmpPos = velAf * tmpPos;
-		tmpVel = accAf * tmpVel;
-		pos(coordinate::X) = tmpPos(coordinate::X);
-		pos(coordinate::Y) = tmpPos(coordinate::Y);
+	tmpPos = velAf * tmpPos;
+	tmpVel = accAf * tmpVel;
+	pos(coordinate::X) = tmpPos(coordinate::X);
+	pos(coordinate::Y) = tmpPos(coordinate::Y);
 
-		vel(coordinate::X) = tmpVel(coordinate::X);
-		vel(coordinate::Y) = tmpVel(coordinate::Y);
+	vel(coordinate::X) = tmpVel(coordinate::X);
+	vel(coordinate::Y) = tmpVel(coordinate::Y);
 
-		// acc(coordinate::X) = tmpAcc(coordinate::X);
-		// acc(coordinate::Y) = tmpAcc(coordinate::Y);
-		theta += thetaDot;
-		thetaDot += theta2Dot;
-		return;
-	} else{
-		vel += acc;
-		pos += vel;
-		return;
-	}
+	// acc(coordinate::X) = tmpAcc(coordinate::X);
+	// acc(coordinate::Y) = tmpAcc(coordinate::Y);
+	theta += thetaDot;
+	thetaDot += theta2Dot;
+	return;
 }
 
 void Ball::bounce(uint16_t _width, uint16_t _height){ // max width/height of window
@@ -307,7 +300,7 @@ void Rectangle::update(){
 		// can do set.count(KEY_VALUE) to determine if it exists in my set
 		uint8_t missingIdx = 0;
 		for(uint8_t i = 0; i < 4; i++){
-			missingIdx =	(std::get<0>(check.value()).count(&corners[i]))? missingIdx : i; // returns 0 if it doesn't exist in the set
+			missingIdx =	( check.value().count(&corners[i]))? missingIdx : i; // returns 0 if it doesn't exist in the set
 		}
 		for(uint8_t i = 0; i < 4; i++){ // if there's another bug, it might be because corner[0] overwrote multiple..
 			painterCorners[i] =	( (i < border::MIN_Y) && ( roundHelper(corners[missingIdx](coordinate::X)*PPM) == borderVals[i] ) )? &corners[missingIdx] :
@@ -376,44 +369,41 @@ bool Rectangle::lineCheck(Vector2f p1, Vector2f p2, Vector2f pIn, bool under){
 // updates velocities (accelerations too? not now)
 // updates the 4 corners to generate pixels from
 
-void Rectangle::move(bool angular){
-	// need to shift
-	if(angular){
-		Matrix3f velAf;
-		// Matrix3f accAf;
-		// is the acceleration Affine even necessary?
-		// I update velocity vector from acceleration, then update angular as scalar..
-		velAf <<	cos(thetaDot),	-sin(thetaDot),	vel(coordinate::X),
-					sin(thetaDot),	cos(thetaDot),	vel(coordinate::Y),
-					0,0,1;
+void Rectangle::move(){
+	Matrix3f velAf;
+	// Matrix3f accAf;
+	// is the acceleration Affine even necessary?
+	// I update velocity vector from acceleration, then update angular as scalar..
+	velAf <<	cos(thetaDot),	-sin(thetaDot),	vel(coordinate::X),
+				sin(thetaDot),	cos(thetaDot),	vel(coordinate::Y),
+				0,0,1;
 
-		// accAf <<	cos(theta2Dot),		sin(theta2Dot),acc(coordinate::X),
-		// 			-sin(theta2Dot),	cos(theta2Dot),acc(coordinate::Y),
-		// 			0,0,1;
+	// accAf <<	cos(theta2Dot),		sin(theta2Dot),acc(coordinate::X),
+	// 			-sin(theta2Dot),	cos(theta2Dot),acc(coordinate::Y),
+	// 			0,0,1;
 
-		for(uint8_t i = 0; i < 4; i++){
-			// all 4 corners rotate RELATIVE to reference frame
+	for(uint8_t i = 0; i < 4; i++){
+		// all 4 corners rotate RELATIVE to reference frame
 
-			// scratch buffers for switching between 2D and 3D vectors
-			Vector2f scratch2; // for doing 2D math
-			Vector3f scratch3; // for doing 3D math
-			scratch2 = corners[i] - pos; // referenced from the body reference frame
-			Vector3f cornerTransform;
-			cornerTransform << scratch2,1;
-			cornerTransform = velAf * cornerTransform; // angular + linear velocity
-			scratch3 << pos,0;
-			cornerTransform += scratch3; // shift back to ground frame!
-			corners[i](coordinate::X) = cornerTransform(coordinate::X);
-			corners[i](coordinate::Y) = cornerTransform(coordinate::Y);
-		}
-
-		// these vectors all for reference frame
-		pos += vel;
-		vel += acc;
-		// not updating acceleration for now
-		theta += thetaDot;
-		thetaDot += theta2Dot;
+		// scratch buffers for switching between 2D and 3D vectors
+		Vector2f scratch2; // for doing 2D math
+		Vector3f scratch3; // for doing 3D math
+		scratch2 = corners[i] - pos; // referenced from the body reference frame
+		Vector3f cornerTransform;
+		cornerTransform << scratch2,1;
+		cornerTransform = velAf * cornerTransform; // angular + linear velocity
+		scratch3 << pos,0;
+		cornerTransform += scratch3; // shift back to ground frame!
+		corners[i](coordinate::X) = cornerTransform(coordinate::X);
+		corners[i](coordinate::Y) = cornerTransform(coordinate::Y);
 	}
+
+	// these vectors all for reference frame
+	pos += vel;
+	vel += acc;
+	// not updating acceleration for now
+	theta += thetaDot;
+	thetaDot += theta2Dot;
 	return;
 }
 
@@ -435,7 +425,9 @@ int32_t roundHelper(float in){
 // c++17 structured binding:
 	// auto [ address0, address1 ] = checkCopies(painterCorners);
 // returns the set of addresses and the 2 targeted indices
-std::optional<std::tuple<std::set<Vector2f*>>> checkCopies(Vector2f ** in){
+// dont need tuple anymore, but it's really good to know
+// std::optional<std::tuple<std::set<Vector2f*>>>
+std::optional<std::set<Vector2f*>> checkCopies(Vector2f ** in){
 	uint8_t offset = 0;
 	while(offset < 3){
 			for(uint8_t i = offset + 1; i < 4; i++){
@@ -444,7 +436,8 @@ std::optional<std::tuple<std::set<Vector2f*>>> checkCopies(Vector2f ** in){
 					for(uint8_t j = 0; j < 4; j++){
 						retSet.insert(in[j]);
 					}
-					return { std::make_tuple(retSet) }; // tuple might be useless for me lol
+					// return { std::make_tuple(retSet) }; // tuple might be useless for me lol
+					return retSet;
 				}
 			}
 		offset++;
@@ -453,37 +446,3 @@ std::optional<std::tuple<std::set<Vector2f*>>> checkCopies(Vector2f ** in){
 }
 
 // i learned a no no today :)
-
-/*
-
-// <limits> provides a standard epsilon
-	// std::numeric_limits<float OR DOUBLE>::epsilon
-// so.. some sort of inaccuracies led it to be that epsilon was too small
-bool floatCompareEE(float a, float b){
-	bool retVal;
-
-	retVal =	(	(a <= b + std::numeric_limits<float>::epsilon()*1000) && 
-					(a >= b - std::numeric_limits<float>::epsilon()*1000))? true : false;
-
-	return retVal;
-}
-
-bool floatCompareGE(float a, float b){
-	bool retVal;
-
-	retVal =	(a >= b - std::numeric_limits<float>::epsilon()*1000)? true : false;
-
-	return retVal;
-}
-
-bool floatCompareLE(float a, float b){
-	bool retVal;
-
-	retVal =	(a <= b + std::numeric_limits<float>::epsilon()*1000)? true : false;
-
-	return retVal;
-}
-
-// static casting always floors (rounds to 0, from both sides)
-// need to add/subtract 0.5 to round properly
-*/
