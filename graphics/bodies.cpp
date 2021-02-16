@@ -24,17 +24,10 @@ Pixel Pixel::copy(){
 	return out;
 }
 
-Ball::Ball(float _radius, float _xCenter, float _yCenter) : 
-pos(_xCenter,_yCenter), vel((5)*dt,(5)*dt), acc(0,0) // just for now
+Ball::Ball(float _radius, Vector2f _pos, Vector2f _vel, Vector2f _acc, Vector3f _attitude) : 
+pos(_pos), vel(_vel), acc(_acc), attitude(_attitude) // just for now
 {
 	radius = _radius;
-	theta = 0;
-	thetaDot = 0;
-	theta2Dot = 0;
-
-	// update() initializes:
-		// min's and max's, as well as the corners
-		// painter class
 	update();
 	return;
 }
@@ -76,42 +69,18 @@ void Ball::update(){
 	return;
 }
 
-// void Ball::move(Vector2f jerk){ // change in acceleration
-// 	acc = acc + jerk;
-// 	move();
-// }
-
- // constant acceleration
-
 void Ball::move(){
-	Matrix3f velAf;
-	// cos,-sin
-	// sin,cos --> counterclockwise orientation
-	velAf <<	cos(thetaDot),		-sin(thetaDot),	vel(coordinate::X),
-				sin(thetaDot),		cos(thetaDot),	vel(coordinate::Y),
-				0,					0,				1;
-	Matrix3f accAf;
-	accAf <<	cos(theta2Dot),		-sin(theta2Dot),acc(coordinate::X),
-				sin(theta2Dot),		cos(theta2Dot),	acc(coordinate::Y),
-				0,					0,				1;
-	Vector3f tmpPos;
-	tmpPos << pos, 1; // concatenates a 1 on the end of position vector and gets assigned to tmpPos
-	Vector3f tmpVel;
-	tmpVel << vel, 1;
-	// Vector3f tmpAcc(acc(coordinate::X),acc(coordinate::Y),1);
 
-	tmpPos = velAf * tmpPos;
-	tmpVel = accAf * tmpVel;
-	pos(coordinate::X) = tmpPos(coordinate::X);
-	pos(coordinate::Y) = tmpPos(coordinate::Y);
+	// for rotations --> only matters with a reference frame not in the center
 
-	vel(coordinate::X) = tmpVel(coordinate::X);
-	vel(coordinate::Y) = tmpVel(coordinate::Y);
+	// @TODO: add a way of changing the reference point (relative to center generation frame)
+		// then making an Affine matrix for transformations would make sense
 
-	// acc(coordinate::X) = tmpAcc(coordinate::X);
-	// acc(coordinate::Y) = tmpAcc(coordinate::Y);
-	theta += thetaDot;
-	thetaDot += theta2Dot;
+	pos += vel;
+	vel += acc;
+
+	attitude(0) += attitude(1);
+	attitude(1) += attitude(2);
 	return;
 }
 
@@ -181,9 +150,9 @@ void Ball::bounce(uint16_t _width, uint16_t _height){ // max width/height of win
 	return;
 }
 
-Rectangle::Rectangle(float _length, float _width, float _posX, float _posY) :
-	// vel((MPS*10)*dt,(MPS*5)*dt), acc((MPS/10)*dt,(MPS/10)*dt) // arbitrary stuff
-	vel((5.0)*dt,(5.0)*dt), acc(0,0)
+// _posX and _posY dont represent the position vector here..
+Rectangle::Rectangle(float _length, float _width, Vector2f _pos, Vector2f _vel, Vector2f _acc, Vector3f _attitude) :
+	pos(_pos), vel(_vel), acc(_acc), attitude(_attitude)
 	// rPos is going to be recalculated
 	// rPos(0,0), rVel(0,0), rAcc(0,0)
 {
@@ -191,14 +160,14 @@ Rectangle::Rectangle(float _length, float _width, float _posX, float _posY) :
 		// 'standard graphics uses the corner'...
 	// position will be the body's reference frame from origin
 
-	theta = 3*pi/2;
+	// theta = 3*pi/2;
 	length = _length;
 	width = _width;
 	// first generate all corners by referencing the generator corner and position args
 	Vector2f tmpLen, tmpWid;
 	tmpLen << 0,length;
 	tmpWid << width,0;
-	corners[0] << _posX, _posY; // generator
+	corners[0] << pos; // generator
 	corners[1] = tmpLen + corners[0];
 	corners[2] = tmpWid + corners[0];
 	corners[3] = tmpLen + tmpWid + corners[0];
@@ -213,22 +182,14 @@ Rectangle::Rectangle(float _length, float _width, float _posX, float _posY) :
 
 	// rotate
 	Matrix2f ccRot;
-	ccRot <<	cos(theta),		-sin(theta), // the angular orientation
-				sin(theta),		cos(theta);
+	ccRot <<	cos(attitude(0)),	-sin(attitude(0)), // the angular orientation
+				sin(attitude(0)),	cos(attitude(0));
 
 	for(uint8_t i = 0; i<4; i++){
 		corners[i] -= pos; // make the corner in reference to reference point
 		corners[i] = ccRot * corners[i]; // rotate CC by pi
 		corners[i] += pos; // place the corner in reference to ground frame when done
 	}
-
-	thetaDot = ((2*pi)/2)*dt;
-	theta2Dot = (pi/100)*dt;
-	// theta2Dot = ((2*pi)/200)*dt;
-
-	// thetaDot = (2*pi)*dt; // full rotation in 2 seconds
-	// theta2Dot = ((2*pi)/100)*dt;
-
 	update();
 	return;
 }
@@ -374,8 +335,8 @@ void Rectangle::move(){
 	// Matrix3f accAf;
 	// is the acceleration Affine even necessary?
 	// I update velocity vector from acceleration, then update angular as scalar..
-	velAf <<	cos(thetaDot),	-sin(thetaDot),	vel(coordinate::X),
-				sin(thetaDot),	cos(thetaDot),	vel(coordinate::Y),
+	velAf <<	cos(attitude(1)),	-sin(attitude(1)),	vel(coordinate::X),
+				sin(attitude(1)),	cos(attitude(1)),	vel(coordinate::Y),
 				0,0,1;
 
 	// accAf <<	cos(theta2Dot),		sin(theta2Dot),acc(coordinate::X),
@@ -402,8 +363,8 @@ void Rectangle::move(){
 	pos += vel;
 	vel += acc;
 	// not updating acceleration for now
-	theta += thetaDot;
-	thetaDot += theta2Dot;
+	attitude(0) += attitude(1);
+	attitude(1) += attitude(2);
 	return;
 }
 

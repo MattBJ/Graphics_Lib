@@ -49,14 +49,14 @@ public:
 	Vector2f pos;
 	Vector2f vel;
 	Vector2f acc;
-
-	float theta,thetaDot,theta2Dot;
+	Vector3f attitude;
 
 	Pixel painter;
-	float radius;
 	int32_t min_x, min_y, max_x, max_y;
+	
+	float radius;
 	// all in meters, 16 pixels per meter
-	Ball(float _radius, float _xCenter, float _yCenter);
+	Ball(float _radius, Vector2f _pos, Vector2f _vel = Vector2f(0,0), Vector2f _acc = Vector2f(0,0), Vector3f _attitude = Vector3f(0,0,0));
 	void move();
 	// add this next
 	// void move(Vector2f jerk);
@@ -73,26 +73,19 @@ public:
 
 class Rectangle {
 public:
-	float length; // magnitude vectors
-	float width; // magnitude vectors
-
 	Vector2f pos; // referenceFrame
 	Vector2f vel;
 	Vector2f acc;
-
-	Vector2f corners[4];
-
-	// attitude: angle, angular velocity, angular acceleration
-	float theta, thetaDot, theta2Dot;
-
-	// shape vectors
-	// PVector lVec;
-	// PVector wVec;
+	Vector3f attitude; // theta, dot, dot dot
 
 	Pixel painter;
 	int32_t min_x,max_x,min_y,max_y;
+
+	float length; // magnitude vectors
+	float width; // magnitude vectors
+	Vector2f corners[4];
 	// for now, rotational frame is not configurable by developer
-	Rectangle(float _length, float _width, float _posX, float _posY);
+	Rectangle(float _length, float _width, Vector2f _pos, Vector2f _vel = Vector2f(0,0), Vector2f _acc = Vector2f(0,0), Vector3f _attitude = Vector3f(0,0,0));
 	// generates pixels (and X/Y ranges)
 	void update();
 	bool lineCheck(Vector2f p1, Vector2f p2, Vector2f pIn, bool under);
