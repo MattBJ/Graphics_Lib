@@ -39,14 +39,6 @@ SDL_Point toSDL(Ball * source,uint32_t n){
 }
 
 int main(){
-	// PVector vec1(1,2);
-	// PVector vec2(3,4);
-	// PVector out = vec1 + vec2;
-	// std::cout << "X: " << out.x << "\nY: " << out.y << std::endl;
-	// Ball roundBoi(1,6,6);
-	// std::cout << "Number of pixels: " << roundBoi.painter.x.size() << std::endl;
-	// return 0;
-
     Vector2f initPos(20,25);
     Vector2f initVel(0,0);
     Vector2f initAcc(0,0);
@@ -164,23 +156,7 @@ int main(){
         	}
         }
         auto start = std::chrono::high_resolution_clock::now();
-
-        // get the acceleration from the mouse location
-        // difference vector --> point from one location to another (mouse minus circle!, not circle minus mouse)
-
-        // SDL_GetMouseState(&mouse_x,&mouse_y);
-        // PVector mousePos(mouse_x,mouse_y);
-        // mousePos = mousePos - roundBoi.position;
-        // mousePos = mousePos.normalize();
-        // mousePos.scale(MPS/2);
-        // roundBoi.move(mousePos);
-        // all bounce does is change velocity/acceleration
-
-        // move and bounce detection do the same thing --> Update the position/velocity/acceleration vector for update
-
-        // roundBoi.move(true);
-        // roundBoi.update();
-        // roundBoi.bounce(WINDOW_WIDTH,WINDOW_HEIGHT); // checks for a bounce first
+	    
         boxBoi.move();
         boxBoi.update();
         auto boxStop = std::chrono::high_resolution_clock::now();
@@ -239,8 +215,6 @@ int main(){
         auto stop1 = std::chrono::high_resolution_clock::now();
         auto dur1 = std::chrono::duration_cast<std::chrono::microseconds>(stop1 - start1);
         // std::cout << dur1.count() << std::endl;
-        // wait 1/60th of a sec.. just 1 second now
-        // 1000 miliseconds = 1 second, dt = change in time 
         auto stop = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
         // std::cout << duration.count() << std::endl;
@@ -251,9 +225,7 @@ int main(){
         if(!delay){
             std::cout << miliElapsed << std::endl;
         }
-        // microseconds
-        // float miliDuration = duration
-        // SDL_Delay in miliseconds
+	    
         if(delay){
             SDL_Delay(delay); // add 0.5 because casting always rounds down
         }
