@@ -42,16 +42,6 @@ void Ball::update(){
 	// iterate over square (bottom left: position x/y - radius.. converted to PPM)
 	// adding 0.5 for rounding, it gets floored
 	uint16_t quantizedR = static_cast<uint16_t>(radius * PPM + 0.5);
-	// std::cout << "Center pixel: (" 	<< static_cast<uint16_t>(pos(coordinate::X)*PPM+0.5) << ","
-									// << static_cast<uint16_t>(pos(coordinate::Y)*PPM + 0.5) << ")\n";
-	
-	// std::cout <<
-	// "\tmin_x:\t" << min_x << std::endl << 
-	// "\tmax_x:\t" << max_x << std::endl << 
-	// "\tmin_y:\t" << min_y << std::endl << 
-	// "\tmax_y:\t" << max_y << std::endl <<
-	// "\tvelX:\t" << vel(coordinate::X) << std::endl <<
-	// "\tvelY:\t" << vel(coordinate::Y) << std::endl;
 
 	// @TODO: add clipping range on max side as well --> WINDOW_WIDTH/HEIGHT
 	for(i= (min_x>=0)? min_x : 0;i<max_x;i++){ // x axis pixels
@@ -70,8 +60,6 @@ void Ball::update(){
 }
 
 void Ball::move(){
-
-	// for rotations --> only matters with a reference frame not in the center
 
 	// @TODO: add a way of changing the reference point (relative to center generation frame)
 		// then making an Affine matrix for transformations would make sense
@@ -160,7 +148,6 @@ Rectangle::Rectangle(float _length, float _width, Vector2f _pos, Vector2f _vel, 
 		// 'standard graphics uses the corner'...
 	// position will be the body's reference frame from origin
 
-	// theta = 3*pi/2;
 	length = _length;
 	width = _width;
 	// first generate all corners by referencing the generator corner and position args
@@ -202,11 +189,6 @@ void Rectangle::update(){
 	// figure out the borders
 	// pos represents one corner
 
-	// std::cout << "\ncorners[0]:\n" << corners[0].transpose() << std::endl;
-	// std::cout << "\ncorners[1]:\n" << corners[1].transpose() << std::endl;
-	// std::cout << "\ncorners[2]:\n" << corners[2].transpose() << std::endl;
-	// std::cout << "\ncorners[3]:\n" << corners[3].transpose() << std::endl;
-
 	max_x = max_y = std::numeric_limits<int32_t>::min();
 	min_x = min_y = std::numeric_limits<int32_t>::max();
 
@@ -216,10 +198,6 @@ void Rectangle::update(){
 		min_y = ( roundHelper(corners[i](coordinate::Y)*PPM) < min_y )?  roundHelper(corners[i](coordinate::Y)*PPM) : min_y ;
 		max_y = ( roundHelper(corners[i](coordinate::Y)*PPM) > max_y )?  roundHelper(corners[i](coordinate::Y)*PPM) : max_y ;
 	}
-	// std::cout << "min_x:\t" << min_x << std::endl;
-	// std::cout << "max_x:\t" << max_x << std::endl;
-	// std::cout << "min_y:\t" << min_y << std::endl;
-	// std::cout << "max_y:\t" << max_y << std::endl;
 
 	// special case or not --> need to find X and Y coordinate copy on another corner
 	bool specialCase = false;
@@ -405,5 +383,3 @@ std::optional<std::set<Vector2f*>> checkCopies(Vector2f ** in){
 	}
 	return std::nullopt;
 }
-
-// i learned a no no today :)
