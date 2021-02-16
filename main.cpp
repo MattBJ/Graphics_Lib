@@ -60,7 +60,7 @@ int main(){
     if (SDL_Init(SDL_INIT_VIDEO|SDL_INIT_TIMER) != 0) { 
         printf("error initializing SDL: %s\n", SDL_GetError()); 
     } 
-    SDL_Window* win = SDL_CreateWindow("Smoke thatt broccoli",// title of window
+    SDL_Window* win = SDL_CreateWindow("Window Title",// title of window
                                        SDL_WINDOWPOS_CENTERED, // x position
                                        SDL_WINDOWPOS_CENTERED, // y position
                                        WINDOW_WIDTH, // width
