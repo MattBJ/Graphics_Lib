@@ -7,7 +7,6 @@ PROGS	= main
 OBJS	= bodies.o main.o
 
 INC = ../EigenLib/eigen-3.3.9
-# INC += /home/matt/
 INC_PARAMS=$(foreach d, $(INC), -I$d)
 
 .SUFFIXES: .c .o
